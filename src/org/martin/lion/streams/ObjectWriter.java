@@ -17,10 +17,13 @@ import org.martin.electroList.structure.ElectroList;
 public class ObjectWriter<T> {
     private OOS oos;
     private final File fileObjects;
+    //private TInsert tInsert;
     
     public ObjectWriter(File fileObjects) throws IOException {
         oos = new OOS(new FileOutputStream(fileObjects, true));
         this.fileObjects = fileObjects;
+        //tInsert = new TInsert(oos);
+        //tInsert.start();
     }
     
     public ObjectWriter(String fileObjectsPath) throws IOException{

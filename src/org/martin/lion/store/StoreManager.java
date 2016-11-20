@@ -9,12 +9,13 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collection;
-import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.martin.electroList.structure.ElectroList;
+import org.martin.lion.exceptions.InvalidObjectTypeException;
 import org.martin.lion.exceptions.UnknownFieldException;
 import org.martin.lion.streams.ObjectReader;
 import org.martin.lion.streams.ObjectWriter;
-import org.martin.lion.system.SysInfo;
 
 /**
  *
@@ -23,18 +24,19 @@ import org.martin.lion.system.SysInfo;
 public class StoreManager<T> {
     private ElectroList<T> listObjects;
     
-    private ObjectWriter<T> writer;
-    private ObjectReader<T> reader;
+    private final ObjectWriter<T> writer;
+    private final ObjectReader<T> reader;
     
     private final File fileRecords;
     //private final String tableName;
 
-    private Class<T> objectsClazz;
+    private final Class<T> objectsClazz;
     
     // Array utilizado para algunas operaciones reflection
-    private Field[] classFields;
+    private final Field[] classFields;
     
-    public StoreManager(Class<T> objectsClazz, File tblFolder) throws IOException, ClassNotFoundException {
+    public StoreManager(Class<T> objectsClazz, File tblFolder) 
+            throws IOException, ClassNotFoundException {
         listObjects = new ElectroList<>();
 
         this.objectsClazz = objectsClazz;
@@ -59,6 +61,19 @@ public class StoreManager<T> {
                 return true;
         return false;
     }
+
+    private boolean isNumberType(Class<?> clazz){
+        if (Number.class.isAssignableFrom(clazz)) return true;
+        //return clazz.equals(byte.class)
+        
+        String className = clazz.getTypeName();
+    
+        return className.equals("byte") || className.equals("short") || 
+                className.equals("int") || className.equals("long") || 
+                className.equals("float") || className.equals("double"); 
+    }
+    
+//    private boolean isNumberInstance(Class<?> clazz){}
     
     private void loadAll() throws ClassNotFoundException, IOException{
         listObjects = reader.readAllObjects();
@@ -75,8 +90,95 @@ public class StoreManager<T> {
      * Devuelve la cantidad de objetos almacenados.
      * @return Cantidad de objetos almacenados.
      */
-    public int getObjectsCount(){
+    public long getObjectsCount(){
         return listObjects.size();
+    }
+    
+    public long getSumBy(String fieldName){
+        Field field = getField(fieldName);
+        if (field == null)
+            throw new UnknownFieldException(fieldName);
+        if (!isNumberType(field.getType()))
+            throw new InvalidObjectTypeException(field.getType().getName());
+            
+        long sum = 0;
+        
+        for (T obj : listObjects) {
+            try {
+                sum+=field.getLong(obj);
+            } catch (IllegalArgumentException | IllegalAccessException ex) {
+                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        return sum;
+    }
+    
+    public long getMaxBy(String fieldName){
+        Field field = getField(fieldName);
+        if (field == null)
+            throw new UnknownFieldException(fieldName);
+        if (!isNumberType(field.getType()))
+            throw new InvalidObjectTypeException(field.getType().getName());
+            
+        long max = Long.MIN_VALUE;
+        long curValue = 0;
+        
+        for (T obj : listObjects) {
+            try {
+                curValue = field.getLong(obj);
+                if (curValue > max)
+                    max = curValue;
+            } catch (IllegalArgumentException | IllegalAccessException ex) {
+                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        return max;
+    }
+    
+    public long getMinBy(String fieldName){
+        Field field = getField(fieldName);
+        if (field == null)
+            throw new UnknownFieldException(fieldName);
+        if (!isNumberType(field.getType()))
+            throw new InvalidObjectTypeException(field.getType().getName());
+            
+        long min = Long.MAX_VALUE;
+        long curValue = 0;
+        
+        for (T obj : listObjects) {
+            try {
+                curValue = field.getLong(obj);
+                if (curValue < min)
+                    min = curValue;
+            } catch (IllegalArgumentException | IllegalAccessException ex) {
+                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        return min;
+    }
+    
+    public double getAvgBy(String fieldName){
+        Field field = getField(fieldName);
+        if (field == null)
+            throw new UnknownFieldException(fieldName);
+        if (!isNumberType(field.getType()))
+            throw new InvalidObjectTypeException(field.getType().getName());
+        
+        long counter = 0;
+        double sum = 0;
+        
+        for (T object : listObjects) {
+            try {
+                sum+=field.getDouble(object);
+                counter++;
+            } catch (IllegalArgumentException | IllegalAccessException ex) {
+                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        return sum / counter;
     }
 
     public void addObject(T object) throws IOException{
@@ -107,11 +209,11 @@ public class StoreManager<T> {
     }
     
     public T getObjectBy(String fieldName, Object valueToFind) 
-            throws IllegalArgumentException, IllegalAccessException, UnknownFieldException{
+            throws IllegalArgumentException, IllegalAccessException {
         Field field = getField(fieldName);
         if (field == null)
             throw new UnknownFieldException("El campo "+fieldName+" no existe");
-        
+
         for (T object : listObjects)
             if (field.get(object).toString().contains(valueToFind.toString()))
                 return object;
@@ -120,7 +222,7 @@ public class StoreManager<T> {
     }
     
     public ElectroList<T> getObjectsBy(String fieldName, Object valueToFind) 
-            throws IllegalArgumentException, IllegalAccessException, UnknownFieldException{
+            throws IllegalArgumentException, IllegalAccessException {
         Field field = getField(fieldName);
         if (field == null)
             throw new UnknownFieldException("El campo "+fieldName+" no existe");
@@ -139,8 +241,7 @@ public class StoreManager<T> {
     }
 
     public void setObjects(String fieldName, Object valueToFind, T newObject) 
-            throws UnknownFieldException, IllegalArgumentException, 
-            IllegalAccessException, IOException{
+            throws IllegalArgumentException, IllegalAccessException, IOException{
         
         Field field = getField(fieldName);
         if(field == null)
@@ -155,6 +256,11 @@ public class StoreManager<T> {
         writer.update(listObjects);
         
     }
+    
+    public void setObject(T oldObj, T newObj) throws IOException{
+        listObjects.set(listObjects.indexOf(oldObj), newObj);
+        writer.update(listObjects);
+    }
 
     public void deleteAllObjects() throws IOException{
         listObjects.clear();
@@ -167,8 +273,7 @@ public class StoreManager<T> {
     }
     
     public void deleteObjectsBy(String fieldName, Object valueToFind) 
-            throws UnknownFieldException, IllegalArgumentException, 
-            IllegalAccessException, IOException{
+            throws IllegalArgumentException, IllegalAccessException, IOException{
         Field field = getField(fieldName);
         if(field == null)
             throw new UnknownFieldException("El campo "+fieldName+" no existe");
@@ -185,4 +290,14 @@ public class StoreManager<T> {
     public void deleteFile(){
         fileRecords.delete();
     }
+    
+//    public static void main(String[] args) {
+//        Field[] fields = StoreManager.class.getFields();
+//        for (Field field : fields) {
+//            field.setAccessible(true);
+//            System.out.println(field.getType());
+//        }
+//        System.out.println(int.class.asSubclass(Number.class));
+//    }
+
 }

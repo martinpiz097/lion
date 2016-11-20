@@ -12,8 +12,8 @@ import java.io.File;
  * @author martin
  */
 public class SysInfo {
-    public static final File ROOT_DIR = new File("powerdb");
-    
+    public static final File ROOT_DIR = new File("tigerdb");
+    public static final String OS_NAME = System.getProperty("os.name");
     
     static {
         if (!ROOT_DIR.exists()) ROOT_DIR.mkdir();

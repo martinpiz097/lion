@@ -9,22 +9,22 @@ package org.martin.lion.exceptions;
  *
  * @author martin
  */
-public class UnknownFieldException extends RuntimeException {
+public class InvalidObjectTypeException extends RuntimeException {
 
     /**
-     * Creates a new instance of <code>UnknownFieldException</code> without
+     * Creates a new instance of <code>InvalidObjectTypeException</code> without
      * detail message.
      */
-    public UnknownFieldException() {
+    public InvalidObjectTypeException() {
     }
 
     /**
-     * Constructs an instance of <code>UnknownFieldException</code> with the
-     * specified detail message.
+     * Constructs an instance of <code>InvalidObjectTypeException</code> with
+     * the specified detail message.
      *
      * @param msg the detail message.
      */
-    public UnknownFieldException(String msg) {
+    public InvalidObjectTypeException(String msg) {
         super(msg);
     }
 }
