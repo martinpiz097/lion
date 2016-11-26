@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.martin.lion.store;
+package org.martin.lion.store.threads;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -18,11 +18,22 @@ import org.martin.lion.streams.ObjectWriter;
 public class TSaver<T> extends Thread{
     private final ElectroList<T> listObjects;
     private final ObjectWriter<T> writer;
+    private int currentObjectCount;
+    private int listSize;
     private boolean save;
     
     public TSaver(ElectroList<T> listObjects, ObjectWriter<T> writer) {
         this.listObjects = listObjects;
         this.writer = writer;
+        currentObjectCount = listSize = listObjects.size();
+    }
+
+    public boolean hasNewObjects(){
+        return currentObjectCount < listObjects.size();
+    }
+    
+    public void updateCounter(){
+        listSize = currentObjectCount = listObjects.size();
     }
     
     public void saveNow(){
@@ -31,11 +42,17 @@ public class TSaver<T> extends Thread{
     
     @Override
     public void run() {
+        ElectroList<T> subList;
         while (true) {            
             try {
-                if (save) {
-                    save = false;
-                    writer.writeObject(listObjects.peekLast());
+                if (hasNewObjects()) {
+                    //listSize = listObjects.size();
+                    subList = (ElectroList<T>) 
+                            listObjects.subList(currentObjectCount, listObjects.size());
+                    updateCounter();
+                    for (T t : subList) {
+                        writer.writeObject(t);
+                    }
                 }
                 Thread.sleep(10);
             } catch (InterruptedException | IOException ex) {
