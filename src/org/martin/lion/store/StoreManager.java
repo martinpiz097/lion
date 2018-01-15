@@ -325,11 +325,11 @@ public class StoreManager<T> {
     }
 
     public T getFirstObject(){
-        return listObjects.pollFirst();
+        return listObjects.peekFirst();
     }
     
     public T getLastObject(){
-        return listObjects.pollLast();
+        return listObjects.peekFirst();
     }
     
     public T getObjectBy(int index){
@@ -368,7 +368,6 @@ public class StoreManager<T> {
         if (field == null)
             throw new UnknownFieldException("El campo "+fieldName+" no existe");
         Object objField;
-        
         for (T object : listObjects) {
             try {
                 objField = field.get(object);
@@ -449,7 +448,7 @@ public class StoreManager<T> {
     
         int counter = 0;
         for (T object : listObjects) {
-            if (field.get(object).toString().contains(valueToFind.toString()))
+            if (field.get(object).toString().equals(valueToFind.toString()))
                 listObjects.remove(object);
             counter++;
         }

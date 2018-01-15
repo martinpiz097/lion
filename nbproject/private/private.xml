@@ -16,5 +16,13 @@
         <group name="jConsulta">
             <file>file:/home/martin/Dropbox/Java/Proyectos/NetBeansProjects/lion/src/org/martin/lion/exceptions/InvalidObjectTypeException.java</file>
         </group>
+        <group name="Java WEB">
+            <file>file:/home/martin/Dropbox/Java/Proyectos/NetBeansProjects/lion/src/org/martin/lion/system/SysInfo.java</file>
+            <file>file:/home/martin/Dropbox/Java/Proyectos/NetBeansProjects/lion/src/org/martin/lion/store/StoreManager.java</file>
+        </group>
+        <group name="tigerdb">
+            <file>file:/home/martin/Dropbox/Java/Proyectos/NetBeansProjects/lion/src/org/martin/lion/store/StoreManager.java</file>
+            <file>file:/home/martin/Dropbox/Java/Proyectos/NetBeansProjects/lion/src/org/martin/lion/system/SysInfo.java</file>
+        </group>
     </open-files>
 </project-private>
