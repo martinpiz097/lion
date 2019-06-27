@@ -6,6 +6,7 @@
 package org.tigerdb.lion.store;
 
 import org.mpizutil.electrolist.structure.ElectroList;
+import org.tigerdb.bridge.StoreManager;
 import org.tigerdb.lion.exceptions.InvalidObjectTypeException;
 import org.tigerdb.lion.exceptions.UnknownFieldException;
 import org.tigerdb.lion.store.threads.TSaver;
@@ -17,14 +18,19 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
  * @author martin
  */
-public class StoreManager<T> {
+public class LionStoreManager<T> extends StoreManager<T> {
     private ElectroList<T> listObjects;
     
     private final ObjectWriter<T> writer;
@@ -43,8 +49,9 @@ public class StoreManager<T> {
     
     private final Method equalsMethod;
     
-    public StoreManager(Class<T> objectsClazz, File tblFolder) 
+    public LionStoreManager(Class<T> objectsClazz, File tblFolder)
             throws IOException, ClassNotFoundException {
+        super(objectsClazz, tblFolder);
         listObjects = new ElectroList<>();
 
         this.objectsClazz = objectsClazz;
@@ -181,7 +188,7 @@ public class StoreManager<T> {
                 try {
                     sum+=toNumber(field.get(obj).toString());
                 } catch (IllegalArgumentException | IllegalAccessException ex) {
-                    Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
@@ -190,7 +197,7 @@ public class StoreManager<T> {
             try {
                 sum+=field.getLong(obj);
             } catch (IllegalArgumentException | IllegalAccessException ex) {
-                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         
@@ -201,7 +208,8 @@ public class StoreManager<T> {
         tSaver = new TSaver<>(listObjects, writer);
         tSaver.start();
     }
-    
+
+    @Override
     public long getMaxBy(String fieldName){
         Field field = getField(fieldName);
         boolean isString = false;
@@ -220,7 +228,7 @@ public class StoreManager<T> {
                     if (curValue > max)
                         max = curValue;
                 } catch (IllegalArgumentException | IllegalAccessException ex) {
-                    Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
@@ -231,13 +239,14 @@ public class StoreManager<T> {
                 if (curValue > max)
                     max = curValue;
             } catch (IllegalArgumentException | IllegalAccessException ex) {
-                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         
         return max;
     }
-    
+
+    @Override
     public long getMinBy(String fieldName){
         Field field = getField(fieldName);
         boolean isString = false;
@@ -257,7 +266,7 @@ public class StoreManager<T> {
                     if (curValue < min)
                         min = curValue;
                 } catch (IllegalArgumentException | IllegalAccessException ex) {
-                    Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
@@ -268,13 +277,14 @@ public class StoreManager<T> {
                 if (curValue < min)
                     min = curValue;
             } catch (IllegalArgumentException | IllegalAccessException ex) {
-                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         
         return min;
     }
-    
+
+    @Override
     public double getAvgBy(String fieldName){
         Field field = getField(fieldName);
         boolean isString = false;
@@ -293,7 +303,7 @@ public class StoreManager<T> {
                     sum+=toNumber(field.get(object).toString());
                     counter++;
                 } catch (IllegalArgumentException | IllegalAccessException ex) {
-                    Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
@@ -303,44 +313,52 @@ public class StoreManager<T> {
                 sum+=field.getDouble(object);
                 counter++;
             } catch (IllegalArgumentException | IllegalAccessException ex) {
-                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         
         return sum / counter;
     }
 
+    @Override
     public void addObject(T object) throws IOException{
         writer.writeObject(object);
         listObjects.add(object);
     }
-    
+
+    @Override
     public void addObjectParallel(T object) throws IOException{
         listObjects.add(object);
     }
 
+    @Override
     public void addObjectsFrom(Collection<T> list) throws IOException{
         for (T t : list)
             listObjects.add(t);
         writer.update(listObjects);
     }
-    
+
+    @Override
     public ElectroList<T> getObjects(){
         return listObjects;
     }
 
+    @Override
     public T getFirstObject(){
         return listObjects.peekFirst();
     }
-    
+
+    @Override
     public T getLastObject(){
         return listObjects.peekFirst();
     }
-    
+
+    @Override
     public T getObjectBy(int index){
         return listObjects.isEmpty() ? null : listObjects.get(index);
     }
-    
+
+    @Override
     public T getObjectBy(String fieldName, Object valueToFind) 
             throws IllegalArgumentException, IllegalAccessException {
         Field field = getField(fieldName);
@@ -353,7 +371,33 @@ public class StoreManager<T> {
         
         return null;
     }
-    
+
+    @Override
+    public T getFirstBy(Predicate<? super T> predicate) {
+        return listObjects.stream()
+                .filter(predicate).findFirst().orElse(null);
+    }
+
+    @Override
+    public T getLastBy(Predicate<? super T> predicate) {
+        Iterator<T> iterator = listObjects.descendingIterator();
+        T next;
+        while (iterator.hasNext()) {
+            next = iterator.next();
+            if (predicate.test(next))
+                return next;
+        }
+        return null;
+    }
+
+    @Override
+    public List<T> getObjectsBy(Predicate<? super T> predicate) {
+        return listObjects.parallelStream()
+                .filter(predicate)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public ElectroList<T> getObjectsBy(String fieldName, Object valueToFind) 
             throws IllegalArgumentException, IllegalAccessException {
         Field field = getField(fieldName);
@@ -368,6 +412,7 @@ public class StoreManager<T> {
         return listResults;
     }
 
+    @Override
     public T getFirstObjectBy(String fieldName, Object valueToFind){
         Field field = getField(fieldName);
         if (field == null)
@@ -400,19 +445,26 @@ public class StoreManager<T> {
 //                if ((Boolean)(equalsMethod.invoke(field.get(object), valueToFind)))
 //                    return object;
             } catch (IllegalArgumentException | IllegalAccessException ex) {
-                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             /*} catch (InvocationTargetException ex) {
-                Logger.getLogger(StoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(LionStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             */}
         }
         return null;
     }
-    
+
+    @Override
     public void setObject(int index, T newObject) throws IOException{
         listObjects.set(index, newObject);
         writer.update(listObjects);
     }
 
+    @Override
+    public void setObjects(Predicate<? super T> predicate, T t) throws IOException {
+
+    }
+
+    @Override
     public void setObjects(String fieldName, Object valueToFind, T newObject) 
             throws IllegalArgumentException, IllegalAccessException, IOException{
         
@@ -429,22 +481,36 @@ public class StoreManager<T> {
         writer.update(listObjects);
         
     }
-    
+
+    @Override
     public void setObject(T oldObj, T newObj) throws IOException{
         listObjects.set(listObjects.indexOf(oldObj), newObj);
         writer.update(listObjects);
     }
 
+    @Override
     public void deleteAllObjects() throws IOException{
         listObjects.clear();
         writer.clearFile();
     }
-    
+
+    @Override
     public void deleteObject(int index) throws IOException{
         listObjects.remove(index);
         writer.update(listObjects);
     }
-    
+
+    @Override
+    public void deleteObjectsBy(Predicate<? super T> predicate) throws IOException {
+        Stream<T> stream = listObjects.stream()
+                .filter(predicate.negate());
+        List<T> collect = stream.collect(Collectors.toList());
+        listObjects.clear();
+        listObjects.addAll(collect);
+        writer.update(listObjects);
+    }
+
+    @Override
     public void deleteObjectsBy(String fieldName, Object valueToFind) 
             throws IllegalArgumentException, IllegalAccessException, IOException{
         Field field = getField(fieldName);
@@ -459,13 +525,14 @@ public class StoreManager<T> {
         }
         writer.update(listObjects);
     }
-    
-    public void deleteFile(){
+
+    @Override
+    public void deleteRecordFile(){
         fileRecords.delete();
     }
     
 //    public static void main(String[] args) {
-//        Field[] fields = StoreManager.class.getFields();
+//        Field[] fields = LionStoreManager.class.getFields();
 //        for (Field field : fields) {
 //            field.setAccessible(true);
 //            System.out.println(field.getType());

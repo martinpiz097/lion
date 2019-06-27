@@ -13,3 +13,6 @@
 
 - 2.0
     - Se migra proyecto a maven
+    
+- 2.1
+    - Se aplica estandar tiger-bridge en lion
