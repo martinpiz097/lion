@@ -1,10 +1,9 @@
-org/tigerdb/lion/store/StoreManager.class
 org/tigerdb/lion/streams/ObjectReader.class
-org/tigerdb/lion/system/SysInfo.class
 org/tigerdb/lion/exceptions/UnknownFieldException.class
 org/tigerdb/lion/streams/ObjectWriter.class
+org/tigerdb/lion/store/LionStoreManager.class
 org/tigerdb/lion/store/threads/TInsert.class
 org/tigerdb/lion/exceptions/InvalidObjectTypeException.class
 org/tigerdb/lion/streams/OIS.class
-org/tigerdb/lion/store/threads/TSaver.class
 org/tigerdb/lion/streams/OOS.class
+org/tigerdb/lion/store/threads/TSaver.class

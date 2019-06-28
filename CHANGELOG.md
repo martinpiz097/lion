@@ -16,3 +16,7 @@
     
 - 2.1
     - Se aplica estandar tiger-bridge en lion
+    
+- 2.2
+    - Se migran clases a tigerdb para independizar al maximo el motor
+ 
